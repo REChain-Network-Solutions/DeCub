@@ -1,0 +1,525 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: decube-system
+  labels:
+    app: decube
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: decube-config
+  namespace: decube-system
+data:
+  cluster_id: "cluster-001"
+  gossip_peers: |
+    - "gcl-0.gcl-service.decube-system.svc.cluster.local:7946"
+    - "gcl-1.gcl-service.decube-system.svc.cluster.local:7946"
+    - "gcl-2.gcl-service.decube-system.svc.cluster.local:7946"
+    - "gcl-3.gcl-service.decube-system.svc.cluster.local:7946"
+  s3_endpoint: "http://minio-service.decube-system.svc.cluster.local:9000"
+  s3_bucket: "decube-snapshots"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: decube-secrets
+  namespace: decube-system
+type: Opaque
+data:
+  # Base64 encoded private key (example - replace with actual)
+  private_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t..."
+  # Base64 encoded TLS certificate (example - replace with actual)
+  tls_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t..."
+  # Base64 encoded TLS key (example - replace with actual)
+  tls_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t..."
+  # S3 access credentials
+  s3_access_key: "ZGVjdWJl"  # base64 of "decube"
+  s3_secret_key: "ZGVjdWJlLXNlY3JldA=="  # base64 of "decube-secret"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+  namespace: decube-system
+  labels:
+    app: decube
+    component: control-plane
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: decube
+      component: control-plane
+  template:
+    metadata:
+      labels:
+        app: decube
+        component: control-plane
+    spec:
+      containers:
+      - name: control-plane
+        image: decube/control-plane:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        env:
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: cluster_id
+        - name: GOSSIP_PEERS
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: gossip_peers
+        - name: S3_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: s3_endpoint
+        - name: S3_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: s3_bucket
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: decube-secrets
+              key: s3_access_key
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: decube-secrets
+              key: s3_secret_key
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: private-key
+          mountPath: /etc/decube/keys
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: tls_cert
+            path: tls.crt
+      - name: private-key
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: private_key
+            path: private.key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane-service
+  namespace: decube-system
+  labels:
+    app: decube
+    component: control-plane
+spec:
+  selector:
+    app: decube
+    component: control-plane
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 8443
+    targetPort: 8443
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcl
+  namespace: decube-system
+  labels:
+    app: decube
+    component: gcl
+spec:
+  replicas: 4  # BFT requires 4 nodes for f=1 fault tolerance
+  selector:
+    matchLabels:
+      app: decube
+      component: gcl
+  template:
+    metadata:
+      labels:
+        app: decube
+        component: gcl
+    spec:
+      containers:
+      - name: gcl
+        image: decube/gcl:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 7946
+          name: gossip
+        - containerPort: 8443
+          name: https
+        env:
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: cluster_id
+        - name: GOSSIP_PEERS
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: gossip_peers
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: private-key
+          mountPath: /etc/decube/keys
+          readOnly: true
+        - name: gcl-data
+          mountPath: /var/lib/gcl
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: tls_cert
+            path: tls.crt
+      - name: private-key
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: private_key
+            path: private.key
+      - name: gcl-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcl-service
+  namespace: decube-system
+  labels:
+    app: decube
+    component: gcl
+spec:
+  selector:
+    app: decube
+    component: gcl
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: gossip
+    port: 7946
+    targetPort: 7946
+    protocol: TCP
+  - name: https
+    port: 8443
+    targetPort: 8443
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage
+  namespace: decube-system
+  labels:
+    app: decube
+    component: storage
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: decube
+      component: storage
+  template:
+    metadata:
+      labels:
+        app: decube
+        component: storage
+    spec:
+      containers:
+      - name: storage
+        image: decube/storage:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        env:
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: cluster_id
+        - name: S3_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: s3_endpoint
+        - name: S3_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: s3_bucket
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: decube-secrets
+              key: s3_access_key
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: decube-secrets
+              key: s3_secret_key
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: storage-data
+          mountPath: /var/lib/storage
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: tls_cert
+            path: tls.crt
+      - name: storage-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: storage-service
+  namespace: decube-system
+  labels:
+    app: decube
+    component: storage
+spec:
+  selector:
+    app: decube
+    component: storage
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 8443
+    targetPort: 8443
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: decube-system
+  labels:
+    app: decube
+    component: catalog
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: decube
+      component: catalog
+  template:
+    metadata:
+      labels:
+        app: decube
+        component: catalog
+    spec:
+      containers:
+      - name: catalog
+        image: decube/catalog:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        env:
+        - name: CLUSTER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: cluster_id
+        - name: GOSSIP_PEERS
+          valueFrom:
+            configMapKeyRef:
+              name: decube-config
+              key: gossip_peers
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: catalog-data
+          mountPath: /var/lib/catalog
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: decube-secrets
+          items:
+          - key: tls_cert
+            path: tls.crt
+      - name: catalog-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: decube-system
+  labels:
+    app: decube
+    component: catalog
+spec:
+  selector:
+    app: decube
+    component: catalog
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: https
+    port: 8443
+    targetPort: 8443
+    protocol: TCP
+  type: ClusterIP
+---
+# Optional: Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: decube-ingress
+  namespace: decube-system
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - decube.example.com
+    secretName: decube-tls
+  rules:
+  - host: decube.example.com
+    http:
+      paths:
+      - path: /api/v1/control-plane
+        pathType: Prefix
+        backend:
+          service:
+            name: control-plane-service
+            port:
+              number: 8443
+      - path: /api/v1/catalog
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-service
+            port:
+              number: 8443
+      - path: /api/v1/storage
+        pathType: Prefix
+        backend:
+          service:
+            name: storage-service
+            port:
+              number: 8443

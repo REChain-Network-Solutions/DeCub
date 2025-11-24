@@ -1,0 +1,65 @@
+# DeCube Local Control-Plane Configuration
+
+# Node configuration
+node:
+  id: "node-1"
+  data_dir: "/var/lib/decube"
+  listen_address: "0.0.0.0:2379"
+  peer_addresses:
+    - "node-1:2380"
+    - "node-2:2380"
+    - "node-3:2380"
+
+# etcd configuration
+etcd:
+  name: "node-1"
+  data_dir: "/var/lib/decube/etcd"
+  wal_dir: "/var/lib/decube/etcd/wal"
+  snapshot_count: 10000
+  heartbeat_interval: 100
+  election_timeout: 1000
+  max_snapshots: 5
+  max_wals: 5
+  auto_compaction_retention: "1h"
+  quota_backend_bytes: 4294967296  # 4GB
+
+# API configuration
+api:
+  rest:
+    enabled: true
+    address: "0.0.0.0:8080"
+    cors_origins:
+      - "*"
+  grpc:
+    enabled: true
+    address: "0.0.0.0:9090"
+
+# Replication configuration
+replication:
+  enabled: true
+  peer_timeout: 5s
+  retry_interval: 1s
+  max_retries: 3
+
+# Snapshot configuration
+snapshot:
+  enabled: true
+  interval: 1h
+  retention_count: 10
+  compression: true
+
+# Logging configuration
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  max_size: 100
+  max_backups: 3
+  max_age: 28
+
+# Security configuration
+security:
+  tls_enabled: false
+  cert_file: ""
+  key_file: ""
+  ca_file: ""

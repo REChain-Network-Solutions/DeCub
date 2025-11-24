@@ -1,0 +1,230 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/rechain/rechain/api/proto";
+
+// RechainService provides the main gRPC API for REChain
+service RechainService {
+  // Node operations
+  rpc GetNodeInfo(NodeInfoRequest) returns (NodeInfoResponse);
+  rpc GetPeers(PeersRequest) returns (PeersResponse);
+
+  // Block operations
+  rpc GetBlock(GetBlockRequest) returns (BlockResponse);
+  rpc GetLatestBlock(GetLatestBlockRequest) returns (BlockResponse);
+  rpc GetBlocks(GetBlocksRequest) returns (BlocksResponse);
+
+  // Transaction operations
+  rpc SubmitTx(SubmitTxRequest) returns (SubmitTxResponse);
+  rpc GetTx(GetTxRequest) returns (TxResponse);
+  rpc GetTxs(GetTxsRequest) returns (TxsResponse);
+
+  // Consensus operations
+  rpc GetConsensusState(ConsensusStateRequest) returns (ConsensusStateResponse);
+
+  // CAS operations
+  rpc StoreObject(StoreObjectRequest) returns (StoreObjectResponse);
+  rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
+  rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+  rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
+
+  // Gossip operations
+  rpc GetGossipState(GossipStateRequest) returns (GossipStateResponse);
+  rpc UpdateGossipState(UpdateGossipStateRequest) returns (UpdateGossipStateResponse);
+  rpc QueryGossip(QueryGossipRequest) returns (QueryGossipResponse);
+}
+
+// Node Info Messages
+message NodeInfoRequest {}
+
+message NodeInfoResponse {
+  string node_id = 1;
+  string version = 2;
+  string network = 3;
+  uint64 block_height = 4;
+  string consensus = 5;
+  repeated string peers = 6;
+  string start_time = 7;
+}
+
+message PeersRequest {}
+
+message PeersResponse {
+  repeated Peer peers = 1;
+  int32 count = 2;
+}
+
+message Peer {
+  string id = 1;
+  string address = 2;
+  string last_seen = 3;
+  bool connected = 4;
+}
+
+// Block Messages
+message GetBlockRequest {
+  uint64 height = 1;
+}
+
+message GetLatestBlockRequest {}
+
+message GetBlocksRequest {
+  uint64 limit = 1;
+  uint64 offset = 2;
+}
+
+message BlockResponse {
+  Block block = 1;
+  bool found = 2;
+}
+
+message BlocksResponse {
+  repeated Block blocks = 1;
+  uint64 count = 2;
+}
+
+message Block {
+  uint64 height = 1;
+  int32 round = 2;
+  string timestamp = 3;
+  repeated bytes txs = 4;
+  bytes last_hash = 5;
+  bytes state_hash = 6;
+  bytes hash = 7;
+}
+
+// Transaction Messages
+message SubmitTxRequest {
+  string type = 1;
+  bytes payload = 2;
+}
+
+message SubmitTxResponse {
+  string tx_id = 1;
+  string status = 2;
+  string timestamp = 3;
+}
+
+message GetTxRequest {
+  string hash = 1;
+}
+
+message GetTxsRequest {
+  uint64 limit = 1;
+  uint64 offset = 2;
+  string type_filter = 3;
+}
+
+message TxResponse {
+  Transaction tx = 1;
+  bool found = 2;
+}
+
+message TxsResponse {
+  repeated Transaction txs = 1;
+  uint64 count = 2;
+}
+
+message Transaction {
+  string id = 1;
+  string type = 2;
+  bytes payload = 3;
+  string timestamp = 4;
+  string sender = 5;
+  bytes signature = 6;
+  string status = 7;
+}
+
+// Consensus Messages
+message ConsensusStateRequest {}
+
+message ConsensusStateResponse {
+  uint64 height = 1;
+  int32 round = 2;
+  string step = 3;
+  string proposer = 4;
+  repeated string validators = 5;
+  int32 mempool_size = 6;
+  string last_commit_time = 7;
+}
+
+// CAS Messages
+message StoreObjectRequest {
+  bytes data = 1;
+  map<string, string> metadata = 2;
+}
+
+message StoreObjectResponse {
+  string cid = 1;
+  int64 size = 2;
+  int32 chunks = 3;
+  string merkle_root = 4;
+  string uploaded = 5;
+}
+
+message GetObjectRequest {
+  string cid = 1;
+}
+
+message GetObjectResponse {
+  bytes data = 1;
+  map<string, string> metadata = 2;
+  bool found = 3;
+}
+
+message DeleteObjectRequest {
+  string cid = 1;
+}
+
+message DeleteObjectResponse {
+  bool deleted = 1;
+}
+
+message ListObjectsRequest {
+  string prefix = 1;
+  uint64 limit = 2;
+  string continuation_token = 3;
+}
+
+message ListObjectsResponse {
+  repeated ObjectInfo objects = 1;
+  uint64 count = 2;
+  string next_continuation_token = 3;
+}
+
+message ObjectInfo {
+  string cid = 1;
+  int64 size = 2;
+  int32 chunks = 3;
+  string merkle_root = 4;
+  string uploaded = 5;
+  map<string, string> metadata = 6;
+}
+
+// Gossip Messages
+message GossipStateRequest {}
+
+message GossipStateResponse {
+  map<string, string> state = 1;
+  int32 peer_count = 2;
+  string last_sync = 3;
+}
+
+message UpdateGossipStateRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message UpdateGossipStateResponse {
+  bool updated = 1;
+}
+
+message QueryGossipRequest {
+  string key = 1;
+}
+
+message QueryGossipResponse {
+  string value = 1;
+  bool found = 2;
+}

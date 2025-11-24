@@ -1,0 +1,35 @@
+[Unit]
+Description=DeCube Local Control-Plane
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=decube
+Group=decube
+WorkingDirectory=/var/lib/decube
+ExecStart=/usr/local/bin/decube --config /etc/decube/config.yaml
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ReadWritePaths=/var/lib/decube /var/log/decube
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+
+# Resource limits
+MemoryLimit=1G
+CPUQuota=200%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=decube
+
+[Install]
+WantedBy=multi-user.target

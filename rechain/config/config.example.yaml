@@ -1,0 +1,57 @@
+# Node configuration
+node:
+  # Node ID (leave empty to auto-generate)
+  id: ""
+  # Data directory (default: ./data)
+  data_dir: "./data"
+  # Log level (debug, info, warn, error, fatal, panic)
+  log_level: "info"
+  # Enable metrics collection
+  enable_metrics: true
+
+# Network configuration
+network:
+  # Address to listen for incoming connections
+  listen_address: "tcp://0.0.0.0:26656"
+  # List of bootstrap nodes to connect to
+  bootstrap:
+    - "tcp://bootstrap1.example.com:26656"
+    - "tcp://bootstrap2.example.com:26656"
+  # Maximum number of peers to connect to
+  max_peers: 50
+
+# Storage configuration
+storage:
+  # Storage engine (badger, leveldb, etc.)
+  engine: "badger"
+  # Path to store data (default: <data_dir>/chain)
+  path: ""
+  # Cache size in bytes (default: 100MB)
+  cache_size: 104857600
+  # Sync writes to disk (safer but slower)
+  sync: true
+
+# Consensus configuration
+consensus:
+  # Consensus type (bft, raft, etc.)
+  type: "bft"
+  # Block time (how often to propose a new block)
+  block_time: "1s"
+  # Timeout for proposing a block
+  timeout_propose: "3s"
+  # Timeout for prevote step
+  timeout_prevote: "1s"
+  # Timeout for precommit step
+  timeout_precommit: "1s"
+  # Timeout for commit step
+  timeout_commit: "1s"
+
+# API configuration
+api:
+  # Enable/disable the API server
+  enabled: true
+  # Address to listen for API requests
+  address: "0.0.0.0:1317"
+  # List of allowed CORS origins
+  cors_allowed_origins:
+    - "*"

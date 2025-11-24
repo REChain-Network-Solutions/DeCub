@@ -1,0 +1,261 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/decube/decube/api/proto";
+
+// DeCubeService provides the gRPC API for the DeCube local control-plane
+service DeCubeService {
+  // Pod operations
+  rpc CreatePod(CreatePodRequest) returns (CreatePodResponse);
+  rpc GetPod(GetPodRequest) returns (GetPodResponse);
+  rpc ListPods(ListPodsRequest) returns (ListPodsResponse);
+  rpc UpdatePod(UpdatePodRequest) returns (UpdatePodResponse);
+  rpc DeletePod(DeletePodRequest) returns (DeletePodResponse);
+
+  // Snapshot operations
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (CreateSnapshotResponse);
+  rpc GetSnapshot(GetSnapshotRequest) returns (GetSnapshotResponse);
+  rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+  rpc RestoreSnapshot(RestoreSnapshotRequest) returns (RestoreSnapshotResponse);
+  rpc DeleteSnapshot(DeleteSnapshotRequest) returns (DeleteSnapshotResponse);
+
+  // Lease operations
+  rpc CreateLease(CreateLeaseRequest) returns (CreateLeaseResponse);
+  rpc GetLease(GetLeaseRequest) returns (GetLeaseResponse);
+  rpc ListLeases(ListLeasesRequest) returns (ListLeasesResponse);
+  rpc RenewLease(RenewLeaseRequest) returns (RenewLeaseResponse);
+  rpc DeleteLease(DeleteLeaseRequest) returns (DeleteLeaseResponse);
+
+  // Replication operations
+  rpc ReplicateState(ReplicateStateRequest) returns (ReplicateStateResponse);
+  rpc GetReplicationStatus(GetReplicationStatusRequest) returns (GetReplicationStatusResponse);
+}
+
+// Pod Messages
+message Pod {
+  string name = 1;
+  string namespace = 2;
+  string status = 3;
+  string node_name = 4;
+  string created_at = 5;
+  string updated_at = 6;
+  map<string, string> labels = 7;
+  map<string, string> annotations = 8;
+}
+
+message CreatePodRequest {
+  Pod pod = 1;
+}
+
+message CreatePodResponse {
+  Pod pod = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message GetPodRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message GetPodResponse {
+  Pod pod = 1;
+  bool found = 2;
+  string error = 3;
+}
+
+message ListPodsRequest {
+  string namespace = 1;
+  map<string, string> labels = 2;
+  int32 limit = 3;
+  string continuation_token = 4;
+}
+
+message ListPodsResponse {
+  repeated Pod pods = 1;
+  int32 count = 2;
+  string next_continuation_token = 3;
+}
+
+message UpdatePodRequest {
+  Pod pod = 1;
+}
+
+message UpdatePodResponse {
+  Pod pod = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message DeletePodRequest {
+  string name = 1;
+  string namespace = 2;
+}
+
+message DeletePodResponse {
+  bool deleted = 1;
+  string error = 2;
+}
+
+// Snapshot Messages
+message Snapshot {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  string created_at = 4;
+  int64 size_bytes = 5;
+  string etcd_revision = 6;
+  string checksum = 7;
+  map<string, string> metadata = 8;
+}
+
+message CreateSnapshotRequest {
+  string name = 1;
+  map<string, string> metadata = 2;
+}
+
+message CreateSnapshotResponse {
+  Snapshot snapshot = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message GetSnapshotRequest {
+  string id = 1;
+}
+
+message GetSnapshotResponse {
+  Snapshot snapshot = 1;
+  bool found = 2;
+  string error = 3;
+}
+
+message ListSnapshotsRequest {
+  int32 limit = 1;
+  string continuation_token = 2;
+}
+
+message ListSnapshotsResponse {
+  repeated Snapshot snapshots = 1;
+  int32 count = 2;
+  string next_continuation_token = 3;
+}
+
+message RestoreSnapshotRequest {
+  string snapshot_id = 1;
+  bool skip_hash_check = 2;
+}
+
+message RestoreSnapshotResponse {
+  bool success = 1;
+  string error = 2;
+  string restored_revision = 3;
+}
+
+message DeleteSnapshotRequest {
+  string id = 1;
+}
+
+message DeleteSnapshotResponse {
+  bool deleted = 1;
+  string error = 2;
+}
+
+// Lease Messages
+message Lease {
+  string id = 1;
+  string holder = 2;
+  int64 ttl_seconds = 3;
+  string granted_at = 4;
+  string expires_at = 5;
+  map<string, string> metadata = 6;
+}
+
+message CreateLeaseRequest {
+  string holder = 1;
+  int64 ttl_seconds = 2;
+  map<string, string> metadata = 3;
+}
+
+message CreateLeaseResponse {
+  Lease lease = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message GetLeaseRequest {
+  string id = 1;
+}
+
+message GetLeaseResponse {
+  Lease lease = 1;
+  bool found = 2;
+  string error = 3;
+}
+
+message ListLeasesRequest {
+  string holder = 1;
+  int32 limit = 2;
+  string continuation_token = 3;
+}
+
+message ListLeasesResponse {
+  repeated Lease leases = 1;
+  int32 count = 2;
+  string next_continuation_token = 3;
+}
+
+message RenewLeaseRequest {
+  string id = 1;
+  int64 ttl_seconds = 2;
+}
+
+message RenewLeaseResponse {
+  Lease lease = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message DeleteLeaseRequest {
+  string id = 1;
+}
+
+message DeleteLeaseResponse {
+  bool deleted = 1;
+  string error = 2;
+}
+
+// Replication Messages
+message ReplicateStateRequest {
+  string peer_address = 1;
+  repeated StateEntry entries = 2;
+}
+
+message StateEntry {
+  string key = 1;
+  bytes value = 2;
+  int64 revision = 3;
+}
+
+message ReplicateStateResponse {
+  bool success = 1;
+  string error = 2;
+  int64 applied_revision = 3;
+}
+
+message GetReplicationStatusRequest {}
+
+message GetReplicationStatusResponse {
+  repeated PeerStatus peers = 1;
+  bool is_leader = 2;
+  string leader_address = 3;
+  int64 current_revision = 4;
+}
+
+message PeerStatus {
+  string address = 1;
+  bool connected = 2;
+  int64 last_heartbeat = 3;
+  int64 revision = 4;
+}

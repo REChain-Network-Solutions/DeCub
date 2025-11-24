@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  decube-node1:
+    build: .
+    container_name: decube-node1
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+      - "8080:8080"
+      - "9090:9090"
+    volumes:
+      - decube-node1-data:/var/lib/decube
+      - ./config/config.yaml:/var/lib/decube/config/config.yaml:ro
+    environment:
+      - DECUBE_NODE_ID=node-1
+      - DECUBE_ETCD_NAME=node-1
+    networks:
+      - decube-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  decube-node2:
+    build: .
+    container_name: decube-node2
+    ports:
+      - "2381:2379"
+      - "2382:2380"
+      - "8081:8080"
+      - "9091:9090"
+    volumes:
+      - decube-node2-data:/var/lib/decube
+      - ./config/config.yaml:/var/lib/decube/config/config.yaml:ro
+    environment:
+      - DECUBE_NODE_ID=node-2
+      - DECUBE_ETCD_NAME=node-2
+      - DECUBE_NODE_LISTEN_ADDRESS=0.0.0.0:2379
+      - DECUBE_NODE_PEER_ADDRESSES=node-1:2380,node-2:2380,node-3:2380
+      - DECUBE_API_REST_ADDRESS=0.0.0.0:8080
+      - DECUBE_API_GRPC_ADDRESS=0.0.0.0:9090
+    networks:
+      - decube-net
+    restart: unless-stopped
+    depends_on:
+      - decube-node1
+
+  decube-node3:
+    build: .
+    container_name: decube-node3
+    ports:
+      - "2383:2379"
+      - "2384:2380"
+      - "8082:8080"
+      - "9092:9090"
+    volumes:
+      - decube-node3-data:/var/lib/decube
+      - ./config/config.yaml:/var/lib/decube/config/config.yaml:ro
+    environment:
+      - DECUBE_NODE_ID=node-3
+      - DECUBE_ETCD_NAME=node-3
+      - DECUBE_NODE_LISTEN_ADDRESS=0.0.0.0:2379
+      - DECUBE_NODE_PEER_ADDRESSES=node-1:2380,node-2:2380,node-3:2380
+      - DECUBE_API_REST_ADDRESS=0.0.0.0:8080
+      - DECUBE_API_GRPC_ADDRESS=0.0.0.0:9090
+    networks:
+      - decube-net
+    restart: unless-stopped
+    depends_on:
+      - decube-node1
+      - decube-node2
+
+  # Load balancer (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: decube-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - decube-net
+    restart: unless-stopped
+    depends_on:
+      - decube-node1
+      - decube-node2
+      - decube-node3
+
+volumes:
+  decube-node1-data:
+    driver: local
+  decube-node2-data:
+    driver: local
+  decube-node3-data:
+    driver: local
+
+networks:
+  decube-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

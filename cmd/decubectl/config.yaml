@@ -1,0 +1,15 @@
+# DeCube CLI Configuration
+# Place this file at ~/.decube/config.yaml
+
+# Service endpoints
+control_plane_url: "http://localhost:8080"
+gcl_url: "http://localhost:8081"
+catalog_url: "http://localhost:8082"
+gossip_url: "http://localhost:8083"
+storage_url: "http://localhost:8084"
+
+# Cluster configuration
+cluster_id: "cluster-001"
+
+# Request timeout in seconds
+timeout: 30

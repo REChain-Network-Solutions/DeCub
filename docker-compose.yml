@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.0
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://localhost:2379
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://localhost:2380
+      - ETCD_INITIAL_CLUSTER=default=http://localhost:2380
+      - ETCD_NAME=default
+      - ETCD_DATA_DIR=/etcd-data
+    volumes:
+      - etcd-data:/etcd-data
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=decub
+      - MINIO_ROOT_PASSWORD=decub123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+
+  control-plane:
+    build: ./decub-control-plane
+    ports:
+      - "8080:8080"
+    depends_on:
+      - etcd
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+
+  gcl:
+    build: ./decub-gcl/go
+    ports:
+      - "8081:8080"
+
+  cas:
+    build: ./decub-cas
+    ports:
+      - "8082:8080"
+    depends_on:
+      - minio
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=decub
+      - MINIO_SECRET_KEY=decub123
+
+  catalog:
+    build: ./decub-catalog
+    ports:
+      - "8083:8080"
+
+  gossip:
+    build: ./decub-gossip
+    ports:
+      - "4001:4001"
+    command: ["/ip4/0.0.0.0/tcp/4001"]
+
+volumes:
+  etcd-data:
+  minio-data:

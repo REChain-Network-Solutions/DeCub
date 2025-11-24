@@ -1,0 +1,198 @@
+# REChain Node Configuration
+# This is a production-ready configuration file
+
+# Node configuration
+node:
+  # Node ID (leave empty to auto-generate)
+  id: ""
+  # Data directory (default: ./data)
+  data_dir: "./data"
+  # Log level (debug, info, warn, error, fatal, panic)
+  log_level: "info"
+  # Enable metrics collection
+  enable_metrics: true
+  # Enable profiling
+  enable_profiling: false
+  # Profiling address
+  profiling_address: "localhost:6060"
+
+# Network configuration
+network:
+  # Address to listen for incoming connections
+  listen_address: "/ip4/0.0.0.0/tcp/26656"
+  # List of bootstrap nodes to connect to
+  bootstrap:
+    - "/ip4/192.168.1.100/tcp/26656/p2p/QmNode1..."
+    - "/ip4/192.168.1.101/tcp/26656/p2p/QmNode2..."
+  # Maximum number of peers to connect to
+  max_peers: 50
+  # Peer discovery enabled
+  discovery_enabled: true
+  # NAT traversal enabled
+  nat_enabled: true
+
+# Storage configuration
+storage:
+  # Storage engine (badger, leveldb, rocksdb)
+  engine: "badger"
+  # Path to store data (default: <data_dir>/chain)
+  path: ""
+  # Cache size in bytes (default: 100MB)
+  cache_size: 104857600
+  # Sync writes to disk (safer but slower)
+  sync: true
+  # Compression enabled
+  compression: true
+  # Max open files
+  max_open_files: 1000
+
+# Consensus configuration
+consensus:
+  # Consensus type (bft, raft)
+  type: "bft"
+  # Block time (how often to propose a new block)
+  block_time: "1s"
+  # Timeout for proposing a block
+  timeout_propose: "3s"
+  # Timeout for prevote step
+  timeout_prevote: "1s"
+  # Timeout for precommit step
+  timeout_precommit: "1s"
+  # Timeout for commit step
+  timeout_commit: "1s"
+  # Maximum block size in bytes
+  max_block_size: 1048576
+  # Maximum transactions per block
+  max_txs_per_block: 1000
+
+# CAS (Content-Addressed Storage) configuration
+cas:
+  # S3-compatible endpoint
+  endpoint: "http://localhost:9000"
+  # Access key
+  access_key: "rechain"
+  # Secret key (use environment variable in production)
+  secret_key: "rechain123"
+  # Bucket name
+  bucket: "rechain-cas"
+  # Use SSL
+  use_ssl: false
+  # Chunk size in bytes
+  chunk_size: 67108864  # 64MB
+  # Max retries for operations
+  max_retries: 3
+
+# Gossip configuration
+gossip:
+  # Gossip enabled
+  enabled: true
+  # Fanout (number of peers to send to initially)
+  fanout: 3
+  # Gossip interval
+  interval: "1s"
+  # Anti-entropy interval
+  anti_entropy_interval: "30s"
+  # Message TTL
+  message_ttl: 10
+
+# API configuration
+api:
+  # Enable/disable the API server
+  enabled: true
+  # REST API address
+  rest_address: "0.0.0.0:1317"
+  # gRPC API address
+  grpc_address: "0.0.0.0:9090"
+  # Enable CORS
+  enable_cors: true
+  # CORS allowed origins
+  cors_allowed_origins:
+    - "*"
+  # Rate limiting enabled
+  rate_limiting_enabled: true
+  # Rate limit requests per second
+  rate_limit_rps: 100
+
+# Security configuration
+security:
+  # TLS enabled
+  tls_enabled: true
+  # Certificate file path
+  cert_file: "./certs/server.crt"
+  # Private key file path
+  key_file: "./certs/server.key"
+  # CA certificate file path
+  ca_file: "./certs/ca.crt"
+  # Client certificate required
+  client_cert_required: false
+  # HSM enabled
+  hsm_enabled: false
+  # HSM address
+  hsm_address: "tcp://localhost:12345"
+  # Audit logging enabled
+  audit_enabled: true
+
+# Monitoring configuration
+monitoring:
+  # Prometheus metrics enabled
+  prometheus_enabled: true
+  # Prometheus address
+  prometheus_address: "0.0.0.0:9091"
+  # Metrics prefix
+  metrics_prefix: "rechain"
+  # Health check enabled
+  health_check_enabled: true
+
+# Logging configuration
+logging:
+  # Log format (json, text)
+  format: "json"
+  # Log output (stdout, stderr, file)
+  output: "stdout"
+  # Log file path (if output is file)
+  file_path: "./logs/rechain.log"
+  # Max log file size in MB
+  max_size: 100
+  # Max log file age in days
+  max_age: 30
+  # Max number of log files to keep
+  max_backups: 5
+  # Compress old log files
+  compress: true
+
+# Database configuration (for metadata, etc.)
+database:
+  # Database type (postgres, mysql, sqlite)
+  type: "sqlite"
+  # Connection string
+  connection_string: "./data/metadata.db"
+  # Max open connections
+  max_open_conns: 10
+  # Max idle connections
+  max_idle_conns: 5
+  # Connection max lifetime
+  conn_max_lifetime: "1h"
+
+# Backup configuration
+backup:
+  # Automatic backups enabled
+  enabled: true
+  # Backup interval
+  interval: "24h"
+  # Backup retention period
+  retention: "168h"  # 7 days
+  # Backup directory
+  directory: "./backups"
+  # Remote backup enabled
+  remote_enabled: false
+  # Remote backup endpoint
+  remote_endpoint: ""
+
+# Development configuration (disable in production)
+development:
+  # Debug mode
+  debug: false
+  # Enable pprof
+  pprof_enabled: false
+  # Mock external services
+  mock_services: false

@@ -1,0 +1,223 @@
+version: '3.8'
+
+services:
+  # REChain node
+  rechain-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "26656:26656"    # P2P
+      - "1317:1317"     # REST API
+      - "9090:9090"     # gRPC API
+      - "9091:9091"     # Prometheus metrics
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./certs:/app/certs
+    environment:
+      - RECHAIN_CONFIG=/app/config/config.yaml
+      - RECHAIN_NODE_ID=node-1
+      - RECHAIN_DATA_DIR=/app/data
+      - RECHAIN_LOG_LEVEL=info
+    depends_on:
+      - minio
+      - postgres
+    networks:
+      - rechain
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1317/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Additional REChain nodes for multi-node setup
+  rechain-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "26657:26656"
+      - "1318:1317"
+      - "9092:9090"
+      - "9093:9091"
+    volumes:
+      - ./data-node2:/app/data
+      - ./config:/app/config
+      - ./logs-node2:/app/logs
+      - ./certs:/app/certs
+    environment:
+      - RECHAIN_CONFIG=/app/config/config.yaml
+      - RECHAIN_NODE_ID=node-2
+      - RECHAIN_DATA_DIR=/app/data
+      - RECHAIN_LOG_LEVEL=info
+      - RECHAIN_BOOTSTRAP_PEERS=/ip4/rechain-node/tcp/26656/p2p/QmNode1...
+    depends_on:
+      - minio
+      - postgres
+    networks:
+      - rechain
+    restart: unless-stopped
+
+  rechain-node-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "26658:26656"
+      - "1319:1317"
+      - "9094:9090"
+      - "9095:9091"
+    volumes:
+      - ./data-node3:/app/data
+      - ./config:/app/config
+      - ./logs-node3:/app/logs
+      - ./certs:/app/certs
+    environment:
+      - RECHAIN_CONFIG=/app/config/config.yaml
+      - RECHAIN_NODE_ID=node-3
+      - RECHAIN_DATA_DIR=/app/data
+      - RECHAIN_LOG_LEVEL=info
+      - RECHAIN_BOOTSTRAP_PEERS=/ip4/rechain-node/tcp/26656/p2p/QmNode1...
+    depends_on:
+      - minio
+      - postgres
+    networks:
+      - rechain
+    restart: unless-stopped
+
+  # MinIO for CAS storage
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ACCESS_KEY: rechain
+      MINIO_SECRET_KEY: rechain123
+      MINIO_REGION: us-east-1
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - rechain
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL for metadata storage
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: rechain
+      POSTGRES_USER: rechain
+      POSTGRES_PASSWORD: rechain123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rechain
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rechain -d rechain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - rechain
+    restart: unless-stopped
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - rechain
+    restart: unless-stopped
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./certs:/etc/nginx/certs
+    depends_on:
+      - rechain-node
+      - grafana
+    networks:
+      - rechain
+    restart: unless-stopped
+
+  # etcd for local control plane (optional, for comparison)
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.7
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      ETCD_NAME: etcd-node
+      ETCD_DATA_DIR: /etcd-data
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_INITIAL_CLUSTER: etcd-node=http://etcd:2380
+      ETCD_INITIAL_CLUSTER_TOKEN: rechain-etcd-token
+      ETCD_INITIAL_CLUSTER_STATE: new
+    volumes:
+      - etcd-data:/etcd-data
+    networks:
+      - rechain
+    command: etcd --name etcd-node --data-dir /etcd-data --listen-client-urls http://0.0.0.0:2379 --advertise-client-urls http://etcd:2379 --listen-peer-urls http://0.0.0.0:2380 --initial-advertise-peer-urls http://etcd:2380 --initial-cluster etcd-node=http://etcd:2380 --initial-cluster-token rechain-etcd-token --initial-cluster-state new
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  minio-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+  etcd-data:
+
+networks:
+  rechain:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
