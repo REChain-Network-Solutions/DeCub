@@ -1,0 +1,94 @@
+---
+- name: Deploy DeCube
+  hosts: decube_servers
+  become: yes
+  vars:
+    decube_version: "0.1.0"
+    decube_user: "decube"
+    decube_group: "decube"
+    decube_data_dir: "/var/lib/decube"
+    decube_config_dir: "/etc/decube"
+    decube_log_dir: "/var/log/decube"
+    
+  tasks:
+    - name: Update system packages
+      package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "Debian"
+      
+    - name: Install required packages
+      package:
+        name:
+          - curl
+          - wget
+          - ca-certificates
+          - tzdata
+        state: present
+        
+    - name: Create decube user
+      user:
+        name: "{{ decube_user }}"
+        group: "{{ decube_group }}"
+        system: yes
+        shell: /bin/false
+        home: "{{ decube_data_dir }}"
+        create_home: yes
+        
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ decube_user }}"
+        group: "{{ decube_group }}"
+        mode: '0755'
+      loop:
+        - "{{ decube_data_dir }}"
+        - "{{ decube_config_dir }}"
+        - "{{ decube_log_dir }}"
+        
+    - name: Download DeCube binary
+      get_url:
+        url: "https://github.com/REChain-Network-Solutions/DeCub/releases/download/v{{ decube_version }}/decube-linux-amd64"
+        dest: "/usr/local/bin/decube"
+        mode: '0755'
+        owner: root
+        group: root
+        
+    - name: Copy configuration file
+      template:
+        src: config.yaml.j2
+        dest: "{{ decube_config_dir }}/config.yaml"
+        owner: "{{ decube_user }}"
+        group: "{{ decube_group }}"
+        mode: '0644'
+      notify: restart decube
+      
+    - name: Create systemd service
+      template:
+        src: decube.service.j2
+        dest: /etc/systemd/system/decube.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart decube
+        
+    - name: Enable and start decube service
+      systemd:
+        name: decube
+        enabled: yes
+        state: started
+        daemon_reload: yes
+        
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+        
+    - name: restart decube
+      systemd:
+        name: decube
+        state: restarted
+

@@ -1,0 +1,111 @@
+# DeCube Development Configuration
+# Optimized for local development
+
+# Cluster configuration
+cluster:
+  id: "dev-cluster-001"
+  name: "Development Cluster"
+  region: "local"
+  
+  # Local RAFT consensus
+  raft:
+    bind_addr: "127.0.0.1:7000"
+    data_dir: "./data/raft"
+    heartbeat_timeout: "1s"
+    election_timeout: "2s"
+    snapshot_interval: "60s"
+    snapshot_threshold: 100
+
+# Global Consensus Layer (GCL)
+gcl:
+  enabled: false  # Disable for local dev
+  endpoints: []
+
+# Storage configuration
+storage:
+  # Content Addressable Storage
+  cas:
+    endpoint: "http://localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "decube-cas-dev"
+    region: "local"
+    use_ssl: false
+    chunk_size: 10485760  # 10MB for dev
+  
+  # Object Storage
+  object_storage:
+    endpoint: "http://localhost:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "decube-objects-dev"
+    use_ssl: false
+
+# Gossip protocol
+gossip:
+  enabled: false  # Disable for single-node dev
+  bind_addr: "127.0.0.1:8000"
+  peers: []
+
+# Catalog service
+catalog:
+  enabled: true
+  bind_addr: "127.0.0.1:8080"
+  data_dir: "./data/catalog"
+  crdt_type: "orset"
+
+# Snapshot service
+snapshot:
+  enabled: true
+  chunk_size: 10485760  # 10MB
+  compression: "none"   # No compression for dev
+  encryption: false
+  retention_days: 7
+
+# Security configuration
+security:
+  tls:
+    enabled: false  # Disable TLS for local dev
+  key_rotation:
+    enabled: false
+  authentication:
+    enabled: false  # Disable auth for local dev
+
+# Logging
+logging:
+  level: "debug"  # More verbose for dev
+  format: "text"  # Human-readable
+  output: "stdout"
+  file: ""
+
+# Metrics and monitoring
+metrics:
+  enabled: true
+  bind_addr: "127.0.0.1:9090"
+  path: "/metrics"
+  
+  prometheus:
+    enabled: false  # Disable for local dev
+  
+  tracing:
+    enabled: false
+
+# API server
+api:
+  rest:
+    enabled: true
+    bind_addr: "127.0.0.1:8080"
+    read_timeout: "60s"
+    write_timeout: "60s"
+  
+  grpc:
+    enabled: true
+    bind_addr: "127.0.0.1:9090"
+
+# Performance tuning (relaxed for dev)
+performance:
+  max_concurrent_requests: 100
+  request_timeout: "60s"
+  connection_pool_size: 10
+  worker_pool_size: 2
+

@@ -1,0 +1,137 @@
+# DeCube Configuration Example
+# Copy this file to config.yaml and customize for your deployment
+
+# Cluster configuration
+cluster:
+  id: "cluster-001"
+  name: "Production Cluster"
+  region: "us-east-1"
+  
+  # Local RAFT consensus
+  raft:
+    bind_addr: "0.0.0.0:7000"
+    data_dir: "/var/lib/decube/raft"
+    heartbeat_timeout: "1s"
+    election_timeout: "2s"
+    snapshot_interval: "30s"
+    snapshot_threshold: 1000
+
+# Global Consensus Layer (GCL)
+gcl:
+  enabled: true
+  endpoints:
+    - "gcl-node-1:8080"
+    - "gcl-node-2:8080"
+    - "gcl-node-3:8080"
+  timeout: "5s"
+  retry_attempts: 3
+
+# Storage configuration
+storage:
+  # Content Addressable Storage
+  cas:
+    endpoint: "http://cas:9000"
+    access_key: "decube"
+    secret_key: "decube-secret"
+    bucket: "decube-cas"
+    region: "us-east-1"
+    use_ssl: true
+  
+  # Object Storage (S3-compatible)
+  object_storage:
+    endpoint: "http://minio:9000"
+    access_key: "minioadmin"
+    secret_key: "minioadmin"
+    bucket: "decube-objects"
+    use_ssl: false
+
+# Gossip protocol
+gossip:
+  enabled: true
+  bind_addr: "0.0.0.0:8000"
+  advertise_addr: ""
+  peers:
+    - "node-1:8000"
+    - "node-2:8000"
+    - "node-3:8000"
+  sync_interval: "10s"
+  anti_entropy_interval: "60s"
+
+# Catalog service
+catalog:
+  enabled: true
+  bind_addr: "0.0.0.0:8080"
+  data_dir: "/var/lib/decube/catalog"
+  crdt_type: "orset"  # orset, lww, pncounter
+
+# Snapshot service
+snapshot:
+  enabled: true
+  chunk_size: 67108864  # 64MB
+  compression: "gzip"    # gzip, lz4, none
+  encryption: true
+  retention_days: 30
+
+# Security configuration
+security:
+  tls:
+    enabled: true
+    cert_file: "/etc/decube/tls/cert.pem"
+    key_file: "/etc/decube/tls/key.pem"
+    ca_file: "/etc/decube/tls/ca.pem"
+  
+  key_rotation:
+    enabled: true
+    interval_days: 90
+  
+  authentication:
+    enabled: true
+    method: "jwt"  # jwt, oauth2, mTLS
+
+# Logging
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"  # json, text
+  output: "stdout"  # stdout, file
+  file: "/var/log/decube/decube.log"
+  max_size: 100  # MB
+  max_backups: 10
+  max_age: 30  # days
+
+# Metrics and monitoring
+metrics:
+  enabled: true
+  bind_addr: "0.0.0.0:9090"
+  path: "/metrics"
+  
+  prometheus:
+    enabled: true
+    endpoint: "http://prometheus:9090"
+  
+  tracing:
+    enabled: true
+    jaeger_endpoint: "http://jaeger:14268/api/traces"
+    sample_rate: 0.1
+
+# API server
+api:
+  rest:
+    enabled: true
+    bind_addr: "0.0.0.0:8080"
+    read_timeout: "30s"
+    write_timeout: "30s"
+    idle_timeout: "120s"
+  
+  grpc:
+    enabled: true
+    bind_addr: "0.0.0.0:9090"
+    max_recv_msg_size: 4194304  # 4MB
+    max_send_msg_size: 4194304  # 4MB
+
+# Performance tuning
+performance:
+  max_concurrent_requests: 1000
+  request_timeout: "30s"
+  connection_pool_size: 100
+  worker_pool_size: 10
+

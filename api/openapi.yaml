@@ -1,0 +1,291 @@
+openapi: 3.0.0
+info:
+  title: DeCube API
+  description: REST API for DeCube decentralized compute platform
+  version: 1.0.0
+  contact:
+    name: DeCube Support
+    url: https://github.com/REChain-Network-Solutions/DeCub
+    email: support@decube.io
+  license:
+    name: BSD 3-Clause
+    url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.decube.io
+    description: Production server
+
+tags:
+  - name: Catalog
+    description: Catalog service operations
+  - name: Snapshots
+    description: Snapshot operations
+  - name: Gossip
+    description: Gossip protocol operations
+  - name: Consensus
+    description: Consensus operations
+  - name: Storage
+    description: Storage operations
+  - name: Health
+    description: Health and status checks
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the health status of the service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /catalog/snapshots:
+    get:
+      tags:
+        - Catalog
+      summary: List snapshots
+      description: Returns a list of all snapshots in the catalog
+      operationId: listSnapshots
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+        - name: cluster
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of snapshots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotList'
+
+  /catalog/snapshots/{id}:
+    get:
+      tags:
+        - Catalog
+      summary: Get snapshot
+      description: Returns a specific snapshot by ID
+      operationId: getSnapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Snapshot details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+        '404':
+          description: Snapshot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /snapshots:
+    post:
+      tags:
+        - Snapshots
+      summary: Create snapshot
+      description: Creates a new snapshot
+      operationId: createSnapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSnapshotRequest'
+      responses:
+        '201':
+          description: Snapshot created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /snapshots/{id}:
+    delete:
+      tags:
+        - Snapshots
+      summary: Delete snapshot
+      description: Deletes a snapshot
+      operationId: deleteSnapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Snapshot deleted
+        '404':
+          description: Snapshot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /gossip/status:
+    get:
+      tags:
+        - Gossip
+      summary: Get gossip status
+      description: Returns the status of the gossip protocol
+      operationId: getGossipStatus
+      responses:
+        '200':
+          description: Gossip status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GossipStatus'
+
+  /gossip/sync:
+    post:
+      tags:
+        - Gossip
+      summary: Trigger sync
+      description: Triggers a manual synchronization
+      operationId: triggerSync
+      responses:
+        '200':
+          description: Sync triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+
+    Snapshot:
+      type: object
+      properties:
+        id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [created, uploading, ready, deleted]
+
+    SnapshotList:
+      type: object
+      properties:
+        snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Snapshot'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateSnapshotRequest:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    GossipStatus:
+      type: object
+      properties:
+        node_id:
+          type: string
+        peers:
+          type: integer
+        sync_status:
+          type: string
+        last_sync:
+          type: string
+          format: date-time
+
+    SyncResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+security:
+  - BearerAuth: []
+

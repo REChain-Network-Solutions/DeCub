@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+docs/
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+SECURITY.md
+CODE_OF_CONDUCT.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+test/
+tests/
+*.test
+coverage.out
+*.coverprofile
+
+# Development files
+.env
+.env.local
+*.log
+*.tmp
+
+# Dependencies
+vendor/
+go.sum
+node_modules/
+
+# Configuration (keep only production configs)
+config/*.example.yaml
+*.example.*
+
+# Scripts
+scripts/
+Makefile
+
+# Examples
+examples/
+benchmarks/
+
+# Temporary files
+*.zip
+*.tar.gz
+tmp/
+temp/
+

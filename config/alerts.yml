@@ -1,0 +1,76 @@
+groups:
+  - name: decube_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(decube_http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors per second"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, decube_http_request_duration_seconds_bucket) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "P95 latency is {{ $value }} seconds"
+
+      - alert: ServiceDown
+        expr: up{job="decube"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DeCube service is down"
+          description: "Service has been down for more than 1 minute"
+
+      - alert: HighMemoryUsage
+        expr: (decube_memory_usage / decube_memory_limit) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: HighCPUUsage
+        expr: decube_cpu_usage > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: (decube_disk_usage / decube_disk_total) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is {{ $value | humanizePercentage }}"
+
+      - alert: ConsensusFailure
+        expr: decube_consensus_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consensus failures detected"
+          description: "{{ $value }} consensus failures in the last minute"
+
+      - alert: ReplicationLag
+        expr: decube_replication_lag_seconds > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High replication lag"
+          description: "Replication lag is {{ $value }} seconds"
+

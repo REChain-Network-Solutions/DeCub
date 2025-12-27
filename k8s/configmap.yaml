@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: decube-config
+  namespace: decube
+data:
+  config.yaml: |
+    cluster:
+      id: "cluster-001"
+      name: "Kubernetes Cluster"
+    
+    raft:
+      bind_addr: "0.0.0.0:7000"
+      data_dir: "/var/lib/decube/raft"
+      heartbeat_timeout: "1s"
+      election_timeout: "2s"
+    
+    gcl:
+      enabled: true
+      endpoints:
+        - "gcl-0.gcl:8080"
+        - "gcl-1.gcl:8080"
+        - "gcl-2.gcl:8080"
+    
+    storage:
+      cas:
+        endpoint: "http://minio:9000"
+        bucket: "decube-cas"
+        region: "us-east-1"
+    
+    gossip:
+      enabled: true
+      bind_addr: "0.0.0.0:8000"
+      sync_interval: "10s"
+    
+    catalog:
+      enabled: true
+      bind_addr: "0.0.0.0:8080"
+      data_dir: "/var/lib/decube/catalog"
+    
+    api:
+      rest:
+        enabled: true
+        bind_addr: "0.0.0.0:8080"
+      grpc:
+        enabled: true
+        bind_addr: "0.0.0.0:9090"
+    
+    logging:
+      level: "info"
+      format: "json"
+    
+    metrics:
+      enabled: true
+      bind_addr: "0.0.0.0:9090"
+      path: "/metrics"
+

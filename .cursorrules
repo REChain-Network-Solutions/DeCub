@@ -1,0 +1,55 @@
+# Cursor Rules for DeCube Project
+
+## Project Context
+DeCube is a decentralized compute platform implementing BFT consensus for secure, distributed computing across geographically distributed clusters.
+
+## Code Style
+- Follow Go standard conventions
+- Use `gofmt` for formatting
+- Follow existing code patterns
+- Write clear, self-documenting code
+- Add comments for exported functions and complex logic
+
+## Testing
+- Write tests for new functionality
+- Maintain or improve test coverage
+- Use table-driven tests where appropriate
+- Include integration tests for component interactions
+
+## Documentation
+- Update README files when adding features
+- Add API documentation for new endpoints
+- Include examples for new functionality
+- Update architecture docs for significant changes
+
+## Error Handling
+- Always check and handle errors
+- Wrap errors with context using `fmt.Errorf` with `%w`
+- Return errors, don't log and ignore
+- Provide meaningful error messages
+
+## Security
+- Never commit secrets or credentials
+- Use environment variables for sensitive data
+- Validate all inputs
+- Use cryptographic libraries correctly
+- Follow security best practices
+
+## Performance
+- Consider performance implications
+- Use appropriate data structures
+- Avoid unnecessary allocations
+- Profile when optimizing
+
+## Git Workflow
+- Use conventional commit messages
+- Create feature branches
+- Keep commits focused and atomic
+- Write clear PR descriptions
+
+## Dependencies
+- Minimize external dependencies
+- Keep dependencies up to date
+- Document why dependencies are needed
+- Review security advisories
+
