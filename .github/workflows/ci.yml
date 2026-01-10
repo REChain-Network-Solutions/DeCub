@@ -155,7 +155,7 @@ jobs:
         continue-on-error: true
       
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
